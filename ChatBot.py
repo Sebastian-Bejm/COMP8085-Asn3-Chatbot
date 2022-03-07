@@ -8,6 +8,8 @@ Assignment 3 - Chatbot
 import pandas as pd
 import numpy as np
 
+from BayesianAI import BayesianAI
+
 
 def load_dataset(filename):
     """ The first column contains the diseases, and each column after contains the symptoms associated with it """
@@ -33,6 +35,11 @@ if __name__ == '__main__':
     dataset = load_dataset("dataset.csv")
     desc, precaution, severity = load_symptom_files()
 
+    # build the bot
+    bot = BayesianAI(dataset, desc, precaution, severity)
+    bot.build_model()
+
+    # start asking questions
     print("Hello,")
     print("Please tell me about the first symptom you are experiencing...")
     first_symptom = str(input("Enter symptom: "))
@@ -56,10 +63,11 @@ if __name__ == '__main__':
         print(f"\t{idx}) {symptom}")
     num_option = int(input())
 
-    symptom_option_str = matches.iloc[num_option][0]
+    symptom_option_str = str(matches.iloc[num_option][0])
     # input the duration as an integer in days
     print(f"I see, how long have you been experiencing {symptom_option_str}?")
     symptom_duration_days = int(input())
 
     # TODO: find the most probable disease with the given symptom,
     #  check the rest of the symptoms related to that disease
+    bot.give_first_symptom(symptom_option_str, symptom_duration_days)
