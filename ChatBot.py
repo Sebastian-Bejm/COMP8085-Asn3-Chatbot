@@ -20,13 +20,13 @@ def load_dataset(filename):
 def load_symptom_files():
     """ Read in the symptom csv files """
     # contains the description of each disease
-    symptom_desc = pd.read_csv("symptom_Description.csv", header=None)
+    symptom_desc = pd.read_csv("disease_desc.csv", header=None)
 
     # contains the precautions for each disease
-    symptom_precaution = pd.read_csv("symptom_precaution.csv", header=None)
+    symptom_precaution = pd.read_csv("disease_precaution.csv", header=None)
 
     # contains the severity of symptoms
-    symptom_severity = pd.read_csv("Symptom_severity.csv", header=None)
+    symptom_severity = pd.read_csv("symptom_severity.csv", header=None)
     return symptom_desc, symptom_precaution, symptom_severity
 
 
@@ -36,8 +36,8 @@ if __name__ == '__main__':
     desc, precaution, severity = load_symptom_files()
 
     # build the bot
-    bot = BayesianAI(dataset, desc, precaution, severity)
-    bot.build_model()
+    bot = BayesianAI()
+    bot.build_model(dataset, desc, precaution, severity)
 
     # start asking questions
     print("Hello,")
@@ -71,3 +71,14 @@ if __name__ == '__main__':
     # TODO: find the most probable disease with the given symptom,
     #  check the rest of the symptoms related to that disease
     bot.give_first_symptom(symptom_option_str, symptom_duration_days)
+
+    print("I see. I have a hypothesis, let me test it further.")
+    print("Please answer 'y' or 'n' to the following questions:")
+
+    while not bot.finished:
+        next_symptom = bot.symp_to_ask
+        ans = input(f"Are you experiencing {next_symptom}?")
+        bot.give_symptom_answer(ans == "y")
+
+    # handle when bot is finished
+
