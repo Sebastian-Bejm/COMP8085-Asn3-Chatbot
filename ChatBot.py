@@ -68,17 +68,29 @@ if __name__ == '__main__':
     print(f"I see, how long have you been experiencing {symptom_option_str}?")
     symptom_duration_days = int(input())
 
-    # TODO: find the most probable disease with the given symptom,
-    #  check the rest of the symptoms related to that disease
-    bot.give_first_symptom(symptom_option_str, symptom_duration_days)
+    # pass the first symptom to the bot
+    bot.give_first_symptom(symptom_option_str)
 
     print("I see. I have a hypothesis, let me test it further.")
     print("Please answer 'y' or 'n' to the following questions:")
 
-    while not bot.finished:
+    # check what symptoms have been experienced
+    for symptom in bot.disease_potential_symptoms:
+        ans = str(input(f"Are you experiencing {symptom}?"))
+        bot.disease_potential_symptoms[symptom] = (ans == "y")
+
+    # calculate the severity of the sickness given the symptoms
+    if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
+        print("You should take consultation from the doctor.")
+    else:
+        print("It might not be that bad but you should take precautions.")
+
+    # TODO: get confidence score of the predicted disease
+
+    '''while not bot.finished:
         next_symptom = bot.symp_to_ask
         ans = input(f"Are you experiencing {next_symptom}?")
-        bot.give_symptom_answer(ans == "y")
+        bot.give_symptom_answer(ans == "y")'''
 
     # handle when bot is finished
 
