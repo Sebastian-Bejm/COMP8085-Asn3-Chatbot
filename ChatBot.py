@@ -35,6 +35,9 @@ if __name__ == '__main__':
     dataset = load_dataset("dataset.csv")
     desc, precaution, severity = load_symptom_files()
 
+    # drop the duplicate for fluid_overload
+    severity = severity.drop(45) 
+
     # build the bot
     bot = BayesianAI()
     bot.build_model(dataset)
