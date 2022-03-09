@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     # build the bot
     bot = BayesianAI()
-    bot.build_model(dataset, desc, precaution, severity)
+    bot.build_model(dataset)
 
     # start asking questions
     print("Hello,")
@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     symptom_option_str = str(matches.iloc[num_option][0])
     # input the duration as an integer in days
-    print(f"I see, how long have you been experiencing {symptom_option_str}?")
+    print(f"I see, for how many days have you been experiencing {symptom_option_str.replace('_', ' ')}?")
     symptom_duration_days = int(input())
 
     # pass the first symptom to the bot
@@ -76,9 +76,10 @@ if __name__ == '__main__':
 
     # check what symptoms have been experienced
     for symptom in bot.disease_potential_symptoms:
-        ans = str(input(f"Are you experiencing {symptom}?"))
+        ans = input(f"Are you experiencing {symptom.replace('_', ' ')}? ")
         bot.disease_potential_symptoms[symptom] = (ans == "y")
 
+    print("")
     # calculate the severity of the sickness given the symptoms
     if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
         print("You should take consultation from the doctor.")
@@ -86,11 +87,11 @@ if __name__ == '__main__':
         print("It might not be that bad but you should take precautions.")
 
     # TODO: get confidence score of the predicted disease
+    # don't know what to use for confidence score, see 
+    # https://datascience.stackexchange.com/questions/93155/naives-bayes-text-classifier-confidence-score
+    disease_txt = bot.get_disease_and_confidence(desc)
+    print(disease_txt)
 
-    '''while not bot.finished:
-        next_symptom = bot.symp_to_ask
-        ans = input(f"Are you experiencing {next_symptom}?")
-        bot.give_symptom_answer(ans == "y")'''
-
-    # handle when bot is finished
-
+    # TODO: get the precautions
+    precautions = bot.get_precautions(precaution)
+    print("\nTake the following precautions:\n" + "\n".join(precautions))
