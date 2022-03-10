@@ -149,4 +149,5 @@ def disease_classification_train_test():
 
 if __name__ == '__main__':
     # chatbot()
+    # disease_classification_full()
     disease_classification_train_test()
