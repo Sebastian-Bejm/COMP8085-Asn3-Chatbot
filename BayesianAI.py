@@ -36,7 +36,6 @@ class BayesianAI:
         # desc = description of the diseases. Columns = disease name, description
         # precaution = precaution of the diseases. Columns = disease name, precautions (variable len)
         # severity = severity of the symptoms. Columns = symptom name, severity as an int
-        self.dataset = data
 
         # steps:
         # 1. Find prob dist of diseases
@@ -58,7 +57,6 @@ class BayesianAI:
                 if pd.isna(symptom):
                     break
 
-                symptom = symptom.replace(" ", "")
                 # symptom_count is a dict containing key = symptom, val = counter
                 # and also tracks 'total' amount of symptoms
                 symptom_count = self.disease_symptom_counter.get(disease, {})
@@ -82,6 +80,31 @@ class BayesianAI:
 
                 self.disease_symptom_joint_prob_dist[symptom, disease] = count / total
 
+
+    def predict(self, input: pd.DataFrame) -> list:
+        """
+        Predict the output label based on the input.
+        Each row should yield one matching output in the list.
+        """
+        predictions = []
+        for row in input.iterrows():
+            # copy the P(Disease) so we can multiply it
+            prob_disease_dict = {}
+            for disease in self.disease_prob_dist.values: # type: ignore
+                prob_disease_dict[disease] = self.disease_prob_dist[disease] # type: ignore
+
+            for symptom in row[1]:
+                if pd.isna(symptom):
+                    break
+
+                for disease in prob_disease_dict:
+                    # multiply the probability into the disease prob in the dict
+                    prob_disease_dict[disease] *= self.disease_symptom_joint_prob_dist[symptom, disease]
+
+            # all the symptoms are processed => pick the highest value
+            most_likely_disease = max(prob_disease_dict, key=prob_disease_dict.get) # type: ignore
+            predictions.append(most_likely_disease)
+        return predictions
 
     def give_first_symptom(self, symptom: str):
         """
@@ -124,7 +147,7 @@ class BayesianAI:
         for key in self.disease_potential_symptoms:
             # check if the next symptom was experienced (True)
             if self.disease_potential_symptoms[key] is True:
-                n_key = key.replace(" ", "") # NOTE: STRIP ALL WHITESPACES AT THE START
+                n_key = key # NOTE: STRIP ALL WHITESPACES AT THE START
                 row = severity.loc[(severity.iloc[:, 0] == n_key)]
                 severity_sum += int(row[1]) # type: ignore
 

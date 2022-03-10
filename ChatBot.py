@@ -2,11 +2,8 @@
 Assignment 3 - Chatbot
 """
 
-# pip install pandas
-# pip install numpy
-
 import pandas as pd
-import numpy as np
+from sklearn.model_selection import train_test_split
 
 from BayesianAI import BayesianAI
 
@@ -20,17 +17,16 @@ def load_dataset(filename):
 def load_symptom_files():
     """ Read in the symptom csv files """
     # contains the description of each disease
-    symptom_desc = pd.read_csv("disease_desc.csv", header=None)
+    symptom_desc = pd.read_csv("symptom_Description.csv", header=None)
 
     # contains the precautions for each disease
-    symptom_precaution = pd.read_csv("disease_precaution.csv", header=None)
+    symptom_precaution = pd.read_csv("symptom_precaution.csv", header=None)
 
     # contains the severity of symptoms
-    symptom_severity = pd.read_csv("symptom_severity.csv", header=None)
+    symptom_severity = pd.read_csv("Symptom_severity.csv", header=None)
     return symptom_desc, symptom_precaution, symptom_severity
 
-
-if __name__ == '__main__':
+def chatbot():
     # Load all our files
     dataset = load_dataset("dataset.csv")
     desc, precaution, severity = load_symptom_files()
@@ -82,19 +78,75 @@ if __name__ == '__main__':
         ans = input(f"Are you experiencing {symptom.replace('_', ' ')}? ")
         bot.disease_potential_symptoms[symptom] = (ans == "y")
 
-    print("")
+    print("\nRunning diagnosis...\n")
     # calculate the severity of the sickness given the symptoms
     if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
         print("You should take consultation from the doctor.")
     else:
         print("It might not be that bad but you should take precautions.")
 
-    # TODO: get confidence score of the predicted disease
     # don't know what to use for confidence score, see 
     # https://datascience.stackexchange.com/questions/93155/naives-bayes-text-classifier-confidence-score
     disease_txt = bot.get_disease_and_confidence(desc)
     print(disease_txt)
 
-    # TODO: get the precautions
     precautions = bot.get_precautions(precaution)
     print("\nTake the following precautions:\n" + "\n".join(precautions))
+
+def get_classif_accuracy(y_pred, y_actual) -> str:
+    """
+    Show the classification accuracy based on what it predicted and what 
+    the actual values are.
+    """
+    # contains the y values and whether they match
+    # key: y value, value: dictionary containg keys "correct" and "wrong", values = count of correct or wrong
+
+    correct_count = 0
+    total = len(y_pred)
+    for prediction, actual in zip(y_pred, y_actual):
+        if prediction == actual: correct_count += 1
+
+
+    report = "Accuracy: {:.3f} ({}/{})".format(correct_count / total * 100, correct_count, total)
+    return report
+
+
+def disease_classification_full():
+    print("Testing the classifier on the full dataset.")
+
+    # Load all our files
+    dataset = load_dataset("dataset.csv")
+    dataset.replace(" ", "")
+
+    # build the bot
+    bot = BayesianAI()
+    bot.build_model(dataset)
+
+
+    X = dataset.iloc[:, 1:]
+    y = dataset.iloc[:, 0]
+
+    y_pred = bot.predict(X)
+    print(get_classif_accuracy(y_pred, y))
+
+
+def disease_classification_train_test():
+    # Load all our files
+    dataset = load_dataset("dataset.csv")
+    dataset.replace(" ", "")
+
+    train, test = train_test_split(dataset, test_size=0.1, random_state=42)
+
+    # build the bot
+    bot = BayesianAI()
+    bot.build_model(train) # type: ignore
+
+    X_test = test.iloc[:, 1:] # type: ignore
+    y_test = test.iloc[:, 0] # type: ignore
+    y_pred = bot.predict(X_test)
+    print(get_classif_accuracy(y_pred, y_test))
+
+
+if __name__ == '__main__':
+    # chatbot()
+    disease_classification_train_test()
