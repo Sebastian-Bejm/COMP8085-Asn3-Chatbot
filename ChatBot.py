@@ -2,6 +2,10 @@
 Assignment 3 - Chatbot
 """
 
+# pip install pandas
+# pip install numpy
+# pip install sklearn
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 

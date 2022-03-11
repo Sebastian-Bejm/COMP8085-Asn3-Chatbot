@@ -147,7 +147,7 @@ class BayesianAI:
         for key in self.disease_potential_symptoms:
             # check if the next symptom was experienced (True)
             if self.disease_potential_symptoms[key] is True:
-                n_key = key # NOTE: STRIP ALL WHITESPACES AT THE START
+                n_key = key.replace(" ", "") # must replace white space for this to work
                 row = severity.loc[(severity.iloc[:, 0] == n_key)]
                 severity_sum += int(row[1]) # type: ignore
 
