@@ -1,6 +1,5 @@
 from typing import Union, Tuple
 import pandas as pd
-import numpy as np
 from ProbDist import *
 
 
@@ -41,15 +40,6 @@ class BayesianAI:
         """
         Build the model based on the data passed in constructor.
         """
-        # data = prior info about diseases and the symptoms that they have, Columns = disease name, symptoms (variable len)
-        # desc = description of the diseases. Columns = disease name, description
-        # precaution = precaution of the diseases. Columns = disease name, precautions (variable len)
-        # severity = severity of the symptoms. Columns = symptom name, severity as an int
-
-        # steps:
-        # 1. Find prob dist of diseases
-        # 2. Create joint prob dist of diseases and symptom
-        # 3. Keep track of count of diseases and total of all diseases
         DISEASE_COL = 0
 
         # how many diseases are in the population
@@ -138,13 +128,8 @@ class BayesianAI:
         self.symptoms_to_ask = sorted(self.symptoms_to_ask)
         self.symptoms_to_ask.reverse()
 
-
         self.update_possible_diseases(symptom)
         ###################################
-
-        # most_likely_disease = max(prob_disease_dict, key=prob_disease_dict.get) # type: ignore
-        # confidence = max(prob_disease_dict.values())
-        # self.predicted_disease = (most_likely_disease, confidence)
 
         # # this list of symptoms excludes the initial symptom and the "total"
         # potential_symptoms = []
@@ -188,12 +173,27 @@ class BayesianAI:
         if ans:
             self.update_possible_diseases(symptom)
 
-    def get_most_likely_disease(self):
+    def get_most_likely_disease(self, desc: pd.DataFrame, precautions: pd.DataFrame) -> str:
+        # get the disease and confidence score
         most_likely_disease = max(self.possible_diseases, key=self.possible_diseases.get) # type: ignore
-        return most_likely_disease
-        # confidence = max(self.possible_diseases.values())
-        # self.predicted_disease = (most_likely_disease, confidence)
-        
+        prob = max(self.possible_diseases.values())
+        sum_ = sum(self.possible_diseases.values())
+        confidence = prob / sum_
+        txt = "I'm {:.2f}% confident you are facing {}.\n\n".format(confidence * 100, most_likely_disease)
+
+        # get description
+        description = desc[desc[0] == most_likely_disease].iloc[0][1] # type: ignore
+        txt += f"{most_likely_disease.capitalize()}: {description}\n\n"
+
+        # get precautions
+        disease_precautions: pd.Series = precautions[precautions[0] == most_likely_disease].iloc[0] # type: ignore
+        precaution_strs = []
+        # skip the first column cause that's the disease name
+        for precaution_str in disease_precautions[1:]:
+            precaution_strs.append(f"-{precaution_str.capitalize()}")
+
+        txt += "Take the following precautions:\n" + "\n".join(precaution_strs)
+        return txt
 
 
     def calc_sickness_severity(self, severity: pd.DataFrame, days: int):
@@ -213,18 +213,3 @@ class BayesianAI:
         sickness_severity = (severity_sum * days) / (size + 1)
         return sickness_severity
 
-    def get_disease_and_confidence(self, desc: pd.DataFrame) -> str:
-        disease, confidence = self.predicted_disease  # type: ignore
-        txt = "I'm {:.2f}% confident you are facing {}.\n".format(confidence * 100, disease)
-        description = desc[desc[0] == disease].iloc[0][1] # type: ignore
-        txt += f"{disease.capitalize()}: {description}"
-        return txt
-
-    def get_precautions(self, precautions: pd.DataFrame) -> list:
-        disease = self.predicted_disease[0]  # type: ignore
-        disease_precautions: pd.Series = precautions[precautions[0] == disease].iloc[0] # type: ignore
-        precaution_strs = []
-        # skip the first column cause that's the disease name
-        for precaution_str in disease_precautions[1:]:
-            precaution_strs.append(f"-{precaution_str.capitalize()}")
-        return precaution_strs
