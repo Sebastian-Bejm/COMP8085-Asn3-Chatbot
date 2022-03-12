@@ -35,8 +35,11 @@ def chatbot():
     dataset = load_dataset("dataset.csv")
     desc, precaution, severity = load_symptom_files()
 
+    dataset.replace(r" ", "", inplace=True, regex=True)
+
     # drop the duplicate for fluid_overload
     severity = severity.drop(45) 
+    severity.replace(r" ", "", inplace=True, regex=True)
 
     # build the bot
     bot = BayesianAI()
@@ -78,21 +81,26 @@ def chatbot():
     print("Please answer 'y' or 'n' to the following questions:")
 
     # check what symptoms have been experienced
-    for symptom in bot.disease_potential_symptoms:
-        ans = input(f"Are you experiencing {symptom.replace('_', ' ')}? ")
-        bot.disease_potential_symptoms[symptom] = (ans == "y")
+    # for symptom in bot.disease_potential_symptoms:
+    #     ans = input(f"Are you experiencing {symptom.replace('_', ' ')}? ")
+    #     bot.disease_potential_symptoms[symptom] = (ans == "y")
+    while not bot.finished:
+        symptom = bot.get_symptom_to_ask()
+        ans = input(f"Are you experiencing {symptom}? ")
+        bot.give_symptom_answer(ans == "y")
+
+
 
     print("\nRunning diagnosis...\n")
     # calculate the severity of the sickness given the symptoms
-    if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
-        print("You should take consultation from the doctor.")
-    else:
-        print("It might not be that bad but you should take precautions.")
+    # if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
+    #     print("You should take consultation from the doctor.")
+    # else:
+    #     print("It might not be that bad but you should take precautions.")
 
-    # don't know what to use for confidence score, see 
-    # https://datascience.stackexchange.com/questions/93155/naives-bayes-text-classifier-confidence-score
-    disease_txt = bot.get_disease_and_confidence(desc)
-    print(disease_txt)
+    disease = bot.get_most_likely_disease()
+    print(f"You most likely has: {disease}")
+
 
     precautions = bot.get_precautions(precaution)
     print("\nTake the following precautions:\n" + "\n".join(precautions))
@@ -152,6 +160,6 @@ def disease_classification_train_test():
 
 
 if __name__ == '__main__':
-    # chatbot()
+    chatbot()
     # disease_classification_full()
-    disease_classification_train_test()
+    # disease_classification_train_test()

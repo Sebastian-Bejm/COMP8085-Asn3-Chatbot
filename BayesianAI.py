@@ -27,6 +27,15 @@ class BayesianAI:
         self.predicted_disease = ()
         """ A tuple containing the predicted disease and its confidence rate."""
 
+        self.symptoms_to_ask = []
+        """The symptoms we are asking the user."""
+
+        self.finished = False
+        """Whether we are finished asking questions."""
+
+        self.possible_diseases = {}
+        """Tracks the possible diseases and their probability."""
+
 
     def build_model(self, data: pd.DataFrame):
         """
@@ -80,7 +89,7 @@ class BayesianAI:
 
                 self.disease_symptom_joint_prob_dist[symptom, disease] = count / total
 
-
+        
     def predict(self, input: pd.DataFrame) -> list:
         """
         Predict the output label based on the input.
@@ -111,30 +120,80 @@ class BayesianAI:
         Give the first symptom to the bot so it can begin
         deducing possible candidates and symptom to ask.
         """
-        # search through the diseases and find candidates.
-        # pick a symptom, save it
-
-        prob_disease_dict = {}
+        # fill out the possible diseases.
         for disease in self.disease_prob_dist.values: # type: ignore
-            prob_disease_dict[disease] = self.disease_prob_dist[disease] # type: ignore
+            self.possible_diseases[disease] = self.disease_prob_dist[disease] # type: ignore
 
-            # multiply the probability into the disease prob. in the dict
-            prob_disease_dict[disease] *= self.disease_symptom_joint_prob_dist[symptom, disease]
+        # search through the diseases and find symptoms to ask for.
+        self.symptoms_to_ask = []
+        for symptom_counter in self.disease_symptom_counter.values():
+            if symptom in symptom_counter.keys():
+                for _symptom in symptom_counter:
+                    if _symptom == "total" or _symptom == symptom or _symptom in self.symptoms_to_ask:
+                        continue
 
-        most_likely_disease = max(prob_disease_dict, key=prob_disease_dict.get) # type: ignore
-        confidence = max(prob_disease_dict.values())
-        self.predicted_disease = (most_likely_disease, confidence)
+                    self.symptoms_to_ask.append(_symptom)
 
-        # this list of symptoms excludes the initial symptom and the "total"
-        potential_symptoms = []
-        for _symptom in self.disease_symptom_counter[most_likely_disease]:
-            if _symptom != "total" and _symptom != symptom:
-                potential_symptoms.append(_symptom)
+        # sort it alphabetically
+        self.symptoms_to_ask = sorted(self.symptoms_to_ask)
+        self.symptoms_to_ask.reverse()
+
+
+        self.update_possible_diseases(symptom)
+        ###################################
+
+        # most_likely_disease = max(prob_disease_dict, key=prob_disease_dict.get) # type: ignore
+        # confidence = max(prob_disease_dict.values())
+        # self.predicted_disease = (most_likely_disease, confidence)
+
+        # # this list of symptoms excludes the initial symptom and the "total"
+        # potential_symptoms = []
+        # for _symptom in self.disease_symptom_counter[most_likely_disease]:
+        #     if _symptom != "total" and _symptom != symptom:
+        #         potential_symptoms.append(_symptom)
         
 
-        # create a dict with those symptoms and boolean values if they are experiencing them
-        for s in potential_symptoms:
-            self.disease_potential_symptoms[s] = False
+        # # create a dict with those symptoms and boolean values if they are experiencing them
+        # for s in potential_symptoms:
+        #     self.disease_potential_symptoms[s] = False
+
+    def update_possible_diseases(self, symptom):
+        for disease in self.possible_diseases: # type: ignore
+            # multiply the probability into the disease prob. in the dict
+            self.possible_diseases[disease] *= self.disease_symptom_joint_prob_dist[symptom, disease]
+
+        # remove the zeroes
+        self.possible_diseases = {k: v for k, v in self.possible_diseases.items() if v != 0}
+
+        # check if we are done
+        if len(self.possible_diseases.keys()) == 1:
+            self.finished = True
+
+
+    def get_symptom_to_ask(self):
+        """
+        Return the last symptom in the symptoms to ask list.
+        This is so we can just pop it out.
+        """
+        if len(self.symptoms_to_ask) == 1:
+            self.finished = True
+        return self.symptoms_to_ask[-1]
+
+    def give_symptom_answer(self, ans: bool):
+        """
+        Give the answer from the user.
+        """
+        # remove the symptom from the list
+        symptom = self.symptoms_to_ask.pop()
+        if ans:
+            self.update_possible_diseases(symptom)
+
+    def get_most_likely_disease(self):
+        most_likely_disease = max(self.possible_diseases, key=self.possible_diseases.get) # type: ignore
+        return most_likely_disease
+        # confidence = max(self.possible_diseases.values())
+        # self.predicted_disease = (most_likely_disease, confidence)
+        
 
 
     def calc_sickness_severity(self, severity: pd.DataFrame, days: int):
