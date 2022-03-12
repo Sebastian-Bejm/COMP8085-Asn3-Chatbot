@@ -46,7 +46,7 @@ def chatbot():
     # start asking questions
     print("Hello,")
     print("Please tell me about the first symptom you are experiencing...")
-    first_symptom = str(input("Enter symptom: "))
+    first_symptom = input("Enter symptom: ").strip()
 
     # Look for any initial matches
     matches = severity.loc[(severity.iloc[:, 0].str.contains(first_symptom))]
@@ -55,7 +55,7 @@ def chatbot():
     while matches.empty:
         print("I'm sorry, but I'm facing difficulty understanding the symptom.")
         print("Can you use another word to describe your symptom?")
-        first_symptom = input("Enter symptom: ")
+        first_symptom = input("Enter symptom: ").strip()
         matches = severity.loc[(severity.iloc[:, 0].str.contains(first_symptom))]
 
     result_count = len(matches)
@@ -128,7 +128,7 @@ def disease_classification_train_test():
     X_test = test.iloc[:, 1:] # type: ignore
     y_test = test.iloc[:, 0] # type: ignore
     y_pred = bot.predict(X_test)
-    classification_report(y_test, y_pred)
+    print(classification_report(y_test, y_pred))
 
 
 if __name__ == '__main__':

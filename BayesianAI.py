@@ -124,6 +124,9 @@ class BayesianAI:
 
                     self.symptoms_to_ask.append(_symptom)
 
+        if len(self.symptoms_to_ask) == 0:
+            raise ValueError(f"Invalid symptom '{symptom}'. Exiting the bot")
+            
         # sort it alphabetically
         self.symptoms_to_ask = sorted(self.symptoms_to_ask)
         self.symptoms_to_ask.reverse()
