@@ -88,7 +88,7 @@ def chatbot(dataset_filename):
     symptom_duration_days = int(input())
 
     # pass the first symptom to the bot
-    bot.give_first_symptom(symptom_option_str) 
+    bot.give_first_symptom(symptom_option_str)
 
     print("I see. I have a hypothesis, let me test it further.")
     print("Please answer 'y' or 'n' to the following questions:")
@@ -96,37 +96,41 @@ def chatbot(dataset_filename):
     # check what symptoms have been experienced
     while not bot.finished:
         symptom = bot.get_symptom_to_ask()
-        ans = input(f"Are you experiencing {symptom}? ")
+        while True:
+            ans = input(f"Are you experiencing {symptom}? ")
+            if ans not in ["y", "n"]:
+                print("Sorry, can you confirm that symptom again? Please answer 'y' or 'n'")
+            else:
+                break
         bot.give_symptom_answer(ans == "y")
 
     print("\nRunning diagnosis...\n")
 
     likely_disease = bot.get_most_likely_disease(desc, precaution)
-    print(likely_disease)
 
     # calculate the severity of the sickness given the symptoms
     if "not sure" not in likely_disease:
         if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
-            print("You should take consultation from the doctor.")
+            print("\nYou should take consultation from the doctor.")
         else:
-            print("It might not be that bad but you should take precautions.")
+            print("\nIt might not be that bad but you should take precautions.")
 
+    print(likely_disease)
     print("Session Finished.")
 
 
-
-def disease_classification_full():
+def disease_classification_full(dataset_filename):
     print("Testing the classifier on the full dataset.")
 
     # Load all our files
-    dataset = load_dataset("dataset.csv")
+    dataset = load_dataset(dataset_filename)
 
     # build the bot
     if os.path.exists(filename):
         bot = load_bayesian_model()
     else:
         bot = BayesianAI()
-        bot.build_model(datset)  # type: ignore
+        bot.build_model(dataset_filename)  # type: ignore
         save_bayesian_model(bot)
 
     X = dataset.iloc[:, 1:]
@@ -136,9 +140,9 @@ def disease_classification_full():
     print(classification_report(y, y_pred))
 
 
-def disease_classification_train_test():
+def disease_classification_train_test(dataset_filename):
     print("Testing the classifier on the train-test split dataset.")
-    dataset = load_dataset("dataset.csv")
+    dataset = load_dataset(dataset_filename)
     train, test = train_test_split(dataset, test_size=0.1, random_state=42)
 
     # build the bot
@@ -177,6 +181,6 @@ if __name__ == '__main__':
     parser.add_argument("dataset", type=str, help="The input data set in .csv format")
     args = parser.parse_args()
 
-    # disease_classification_full()
-    # disease_classification_train_test()
+    # disease_classification_full(args.dataset)
+    # disease_classification_train_test(args.dataset)
     chatbot(args.dataset)

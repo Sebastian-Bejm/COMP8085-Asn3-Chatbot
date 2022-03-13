@@ -171,7 +171,7 @@ class BayesianAI:
         # get the disease and confidence score
         # two cases for finishing: 0 or 1 disease found
         if len(self.possible_diseases) == 0:
-            txt = "I'm not sure what disease you've gotten based on the symptoms you gave me.\nPlease retry and ensure you answers are correct."
+            txt = "I'm not sure what disease you've gotten based on the symptoms you gave me.\nPlease retry and ensure your answers are correct."
             return txt
 
         most_likely_disease = max(self.possible_diseases, key=self.possible_diseases.get) # type: ignore
