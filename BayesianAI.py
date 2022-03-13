@@ -143,7 +143,7 @@ class BayesianAI:
         self.possible_diseases = {k: v for k, v in self.possible_diseases.items() if v != 0}
 
         # check if we are done
-        if len(self.possible_diseases.keys()) == 1:
+        if len(self.possible_diseases.keys()) <= 1:
             self.finished = True
 
     def get_symptom_to_ask(self):
@@ -169,6 +169,11 @@ class BayesianAI:
 
     def get_most_likely_disease(self, desc: pd.DataFrame, precautions: pd.DataFrame) -> str:
         # get the disease and confidence score
+        # two cases for finishing: 0 or 1 disease found
+        if len(self.possible_diseases) == 0:
+            txt = "I'm not sure what disease you've gotten based on the symptoms you gave me.\nPlease retry and ensure you answers are correct."
+            return txt
+
         most_likely_disease = max(self.possible_diseases, key=self.possible_diseases.get) # type: ignore
         prob = max(self.possible_diseases.values())
         sum_ = sum(self.possible_diseases.values())

@@ -52,7 +52,7 @@ def chatbot(dataset_filename):
     # build the bot
     if os.path.exists(filename):
         print("Loading model...")
-        bot = load_bayesian_model()
+        bot: BayesianAI = load_bayesian_model()
     else:
         bot = BayesianAI()
         bot.build_model(dataset)  # type: ignore
@@ -88,7 +88,7 @@ def chatbot(dataset_filename):
     symptom_duration_days = int(input())
 
     # pass the first symptom to the bot
-    bot.give_first_symptom(symptom_option_str)
+    bot.give_first_symptom(symptom_option_str) 
 
     print("I see. I have a hypothesis, let me test it further.")
     print("Please answer 'y' or 'n' to the following questions:")
@@ -101,15 +101,18 @@ def chatbot(dataset_filename):
 
     print("\nRunning diagnosis...\n")
 
-    # calculate the severity of the sickness given the symptoms
-    if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
-        print("You should take consultation from the doctor.")
-    else:
-        print("It might not be that bad but you should take precautions.")
-
     likely_disease = bot.get_most_likely_disease(desc, precaution)
     print(likely_disease)
+
+    # calculate the severity of the sickness given the symptoms
+    if "not sure" not in likely_disease:
+        if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
+            print("You should take consultation from the doctor.")
+        else:
+            print("It might not be that bad but you should take precautions.")
+
     print("Session Finished.")
+
 
 
 def disease_classification_full():
@@ -160,12 +163,12 @@ def save_bayesian_model(model):
         print("Model file already exists!")
 
 
-def load_bayesian_model():
+def load_bayesian_model() -> BayesianAI:
     model = None
     try:
         model = pickle.load(open(filename, "rb"))
     except FileNotFoundError:
-        print("Model file cannot be found!")
+        raise ValueError("Model file cannot be found!")
     return model
 
 
@@ -175,5 +178,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # disease_classification_full()
-    disease_classification_train_test()
+    # disease_classification_train_test()
     chatbot(args.dataset)
