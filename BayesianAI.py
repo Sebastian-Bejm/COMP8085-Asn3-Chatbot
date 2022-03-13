@@ -20,21 +20,20 @@ class BayesianAI:
         The joint probability distribution (table) of diseases and symptoms.
         """
 
-        self.disease_potential_symptoms = {}
-        """ A dictionary tracking the next symptoms of a predicted disease. """
-
         self.predicted_disease = ()
         """ A tuple containing the predicted disease and its confidence rate."""
 
         self.symptoms_to_ask = []
-        """The symptoms we are asking the user."""
+        """ The symptoms we are asking the user. """
 
         self.finished = False
-        """Whether we are finished asking questions."""
+        """ Whether we are finished asking questions. """
+
+        self.confirmed_symptoms = []
+        """ A list tracking symptoms that the user has confirmed they have. """
 
         self.possible_diseases = {}
-        """Tracks the possible diseases and their probability."""
-
+        """ Tracks the possible diseases and their probability. """
 
     def build_model(self, data: pd.DataFrame):
         """
@@ -79,7 +78,6 @@ class BayesianAI:
 
                 self.disease_symptom_joint_prob_dist[symptom, disease] = count / total
 
-        
     def predict(self, input: pd.DataFrame) -> list:
         """
         Predict the output label based on the input.
@@ -110,6 +108,9 @@ class BayesianAI:
         Give the first symptom to the bot so it can begin
         deducing possible candidates and symptom to ask.
         """
+        # store the first symptom as confirmed symptoms
+        self.confirmed_symptoms.append(symptom)
+
         # fill out the possible diseases.
         for disease in self.disease_prob_dist.values: # type: ignore
             self.possible_diseases[disease] = self.disease_prob_dist[disease] # type: ignore
@@ -126,24 +127,12 @@ class BayesianAI:
 
         if len(self.symptoms_to_ask) == 0:
             raise ValueError(f"Invalid symptom '{symptom}'. Exiting the bot")
-            
+
         # sort it alphabetically
         self.symptoms_to_ask = sorted(self.symptoms_to_ask)
         self.symptoms_to_ask.reverse()
 
         self.update_possible_diseases(symptom)
-        ###################################
-
-        # # this list of symptoms excludes the initial symptom and the "total"
-        # potential_symptoms = []
-        # for _symptom in self.disease_symptom_counter[most_likely_disease]:
-        #     if _symptom != "total" and _symptom != symptom:
-        #         potential_symptoms.append(_symptom)
-        
-
-        # # create a dict with those symptoms and boolean values if they are experiencing them
-        # for s in potential_symptoms:
-        #     self.disease_potential_symptoms[s] = False
 
     def update_possible_diseases(self, symptom):
         for disease in self.possible_diseases: # type: ignore
@@ -156,7 +145,6 @@ class BayesianAI:
         # check if we are done
         if len(self.possible_diseases.keys()) == 1:
             self.finished = True
-
 
     def get_symptom_to_ask(self):
         """
@@ -174,6 +162,9 @@ class BayesianAI:
         # remove the symptom from the list
         symptom = self.symptoms_to_ask.pop()
         if ans:
+            # if the answer to this symptom is yes (y) add that symptom
+            self.confirmed_symptoms.append(symptom)
+            # update the possible diseases from this symptom
             self.update_possible_diseases(symptom)
 
     def get_most_likely_disease(self, desc: pd.DataFrame, precautions: pd.DataFrame) -> str:
@@ -198,21 +189,17 @@ class BayesianAI:
         txt += "Take the following precautions:\n" + "\n".join(precaution_strs)
         return txt
 
-
     def calc_sickness_severity(self, severity: pd.DataFrame, days: int):
-        # calculate the severity of the disease
-        # ask if the first symptom needs to be included when calculating this
-
-        size = len(self.disease_potential_symptoms)
+        """
+        Calculate the severity of the disease given the confirmed symptoms.
+        """
         severity_sum = 0
+        size = len(self.confirmed_symptoms) + 1
 
-        for key in self.disease_potential_symptoms:
-            # check if the next symptom was experienced (True)
-            if self.disease_potential_symptoms[key] is True:
-                n_key = key.replace(" ", "") # must replace white space for this to work
-                row = severity.loc[(severity.iloc[:, 0] == n_key)]
-                severity_sum += int(row[1]) # type: ignore
+        for symptom in self.confirmed_symptoms:
+            row = severity.loc[(severity.iloc[:, 0] == symptom)]
+            severity_sum += int(row[1]) # type: ignore
 
-        sickness_severity = (severity_sum * days) / (size + 1)
+        sickness_severity = (severity_sum * days) / size
         return sickness_severity
 

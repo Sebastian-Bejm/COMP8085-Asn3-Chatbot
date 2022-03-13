@@ -2,17 +2,26 @@
 Assignment 3 - Chatbot
 """
 
+# pip install pandas
+# pip install numpy
+# pip install sklearn
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
+import os.path
+import argparse
+import pickle
 
 from BayesianAI import BayesianAI
 
+filename = "bayes.model"
 
-def load_dataset(filename):
+
+def load_dataset(dataset_filename):
     """ The first column contains the diseases, and each column after contains the symptoms associated with it """
-    dataset = pd.read_csv(filename, low_memory=False)
+    dataset = pd.read_csv(dataset_filename, low_memory=False)
     dataset.iloc[:, 1:] = dataset.iloc[:, 1:].replace(r" ", "", regex=True)
     return dataset
 
@@ -29,19 +38,25 @@ def load_symptom_files():
     symptom_severity = pd.read_csv("Symptom_severity.csv", header=None)
 
     # drop the duplicate for fluid_overload
-    symptom_severity.drop(45, inplace=True) 
+    symptom_severity.drop(45, inplace=True)
     symptom_severity.replace(r" ", "", inplace=True, regex=True)
 
     return symptom_desc, symptom_precaution, symptom_severity
 
-def chatbot():
+
+def chatbot(dataset_filename):
     # Load all our files
-    dataset = load_dataset("dataset.csv")
+    dataset = load_dataset(dataset_filename)
     desc, precaution, severity = load_symptom_files()
 
     # build the bot
-    bot = BayesianAI()
-    bot.build_model(dataset)
+    if os.path.exists(filename):
+        print("Loading model...")
+        bot = load_bayesian_model()
+    else:
+        bot = BayesianAI()
+        bot.build_model(dataset)  # type: ignore
+        save_bayesian_model(bot)
 
     # start asking questions
     print("Hello,")
@@ -79,20 +94,18 @@ def chatbot():
     print("Please answer 'y' or 'n' to the following questions:")
 
     # check what symptoms have been experienced
-    # for symptom in bot.disease_potential_symptoms:
-    #     ans = input(f"Are you experiencing {symptom.replace('_', ' ')}? ")
-    #     bot.disease_potential_symptoms[symptom] = (ans == "y")
     while not bot.finished:
         symptom = bot.get_symptom_to_ask()
         ans = input(f"Are you experiencing {symptom}? ")
         bot.give_symptom_answer(ans == "y")
 
     print("\nRunning diagnosis...\n")
+
     # calculate the severity of the sickness given the symptoms
-    # if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
-    #     print("You should take consultation from the doctor.")
-    # else:
-    #     print("It might not be that bad but you should take precautions.")
+    if bot.calc_sickness_severity(severity, symptom_duration_days) > 13:
+        print("You should take consultation from the doctor.")
+    else:
+        print("It might not be that bad but you should take precautions.")
 
     likely_disease = bot.get_most_likely_disease(desc, precaution)
     print(likely_disease)
@@ -106,8 +119,12 @@ def disease_classification_full():
     dataset = load_dataset("dataset.csv")
 
     # build the bot
-    bot = BayesianAI()
-    bot.build_model(dataset)
+    if os.path.exists(filename):
+        bot = load_bayesian_model()
+    else:
+        bot = BayesianAI()
+        bot.build_model(datset)  # type: ignore
+        save_bayesian_model(bot)
 
     X = dataset.iloc[:, 1:]
     y = dataset.iloc[:, 0]
@@ -122,16 +139,41 @@ def disease_classification_train_test():
     train, test = train_test_split(dataset, test_size=0.1, random_state=42)
 
     # build the bot
-    bot = BayesianAI()
-    bot.build_model(train) # type: ignore
+    if os.path.exists(filename):
+        bot = load_bayesian_model()
+    else:
+        bot = BayesianAI()
+        bot.build_model(train)  # type: ignore
+        save_bayesian_model(bot)
 
-    X_test = test.iloc[:, 1:] # type: ignore
-    y_test = test.iloc[:, 0] # type: ignore
+    X_test = test.iloc[:, 1:]  # type: ignore
+    y_test = test.iloc[:, 0]  # type: ignore
     y_pred = bot.predict(X_test)
     print(classification_report(y_test, y_pred))
 
 
+def save_bayesian_model(model):
+    try:
+        model_file = open(filename, "wb")
+        pickle.dump(model, model_file)
+    except FileExistsError:
+        print("Model file already exists!")
+
+
+def load_bayesian_model():
+    model = None
+    try:
+        model = pickle.load(open(filename, "rb"))
+    except FileNotFoundError:
+        print("Model file cannot be found!")
+    return model
+
+
 if __name__ == '__main__':
-    # chatbot()
+    parser = argparse.ArgumentParser(description="Enter the test dataset to use")
+    parser.add_argument("dataset", type=str, help="The input data set in .csv format")
+    args = parser.parse_args()
+
     # disease_classification_full()
     disease_classification_train_test()
+    chatbot(args.dataset)
