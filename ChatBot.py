@@ -17,6 +17,7 @@ import pickle
 from BayesianAI import BayesianAI
 
 filename = "bayes.model"
+default_dataset = "dataset.csv"
 
 
 def load_dataset(dataset_filename):
@@ -178,9 +179,11 @@ def load_bayesian_model() -> BayesianAI:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Enter the test dataset to use")
-    parser.add_argument("dataset", type=str, help="The input data set in .csv format")
+    parser.add_argument("--data", nargs="?", const=None,
+                        help="The input data set in .csv format")
     args = parser.parse_args()
 
-    # disease_classification_full(args.dataset)
-    # disease_classification_train_test(args.dataset)
-    chatbot(args.dataset)
+    if args.data is None:
+        chatbot(default_dataset)
+    else:
+        disease_classification_train_test(args.data)
