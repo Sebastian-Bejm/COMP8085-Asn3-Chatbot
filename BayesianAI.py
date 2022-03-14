@@ -29,6 +29,9 @@ class BayesianAI:
         self.finished = False
         """ Whether we are finished asking questions. """
 
+        self.found_disease = False
+        """ Whether we have narrowed down a likely disease. """
+
         self.confirmed_symptoms = []
         """ A list tracking symptoms that the user has confirmed they have. """
 
@@ -143,7 +146,22 @@ class BayesianAI:
         self.possible_diseases = {k: v for k, v in self.possible_diseases.items() if v != 0}
 
         # check if we are done
-        if len(self.possible_diseases.keys()) <= 1:
+        if len(self.possible_diseases.keys()) == 1:
+            # first time => we narrowed down the disease.
+            # technically done. Ensure we keep asking for symptoms specific
+            # to this disease only to calculate severity.
+            if not self.found_disease:
+                self.found_disease = True
+                disease = next(iter(self.possible_diseases))
+                symps_of_disease = self.disease_symptom_counter[disease]
+                symps_to_ask = [symp for symp in symps_of_disease if symp in self.symptoms_to_ask]
+                self.symptoms_to_ask = symps_to_ask
+
+            if len(self.symptoms_to_ask) == 0:
+                # no more questions to ask => we are truly done
+                self.finished = True
+
+        if len(self.possible_diseases.keys()) == 0:
             self.finished = True
 
     def get_symptom_to_ask(self):
