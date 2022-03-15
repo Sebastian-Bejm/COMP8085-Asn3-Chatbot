@@ -16,8 +16,8 @@ import pickle
 
 from BayesianAI import BayesianAI
 
-filename = "bayes.model"
-default_dataset = "dataset.csv"
+model_filename = "bayes.model"
+default_dataset_name = "dataset.csv"
 
 
 def load_dataset(dataset_filename):
@@ -51,12 +51,13 @@ def chatbot(dataset_filename):
     desc, precaution, severity = load_symptom_files()
 
     # build the bot
-    if os.path.exists(filename):
+    if os.path.exists(model_filename):
         print("Loading model...")
         bot: BayesianAI = load_bayesian_model()
     else:
         bot = BayesianAI()
-        bot.build_model(dataset)  # type: ignore
+        default_dataset = load_dataset(default_dataset_name)
+        bot.build_model(default_dataset)  # type: ignore
         save_bayesian_model(bot)
 
     # start asking questions
@@ -127,11 +128,12 @@ def disease_classification_full(dataset_filename):
     dataset = load_dataset(dataset_filename)
 
     # build the bot
-    if os.path.exists(filename):
+    if os.path.exists(model_filename):
         bot = load_bayesian_model()
     else:
         bot = BayesianAI()
-        bot.build_model(dataset_filename)  # type: ignore
+        default_dataset = load_dataset(default_dataset_name)
+        bot.build_model(default_dataset)  # type: ignore
         save_bayesian_model(bot)
 
     X = dataset.iloc[:, 1:]
@@ -147,7 +149,7 @@ def disease_classification_train_test(dataset_filename):
     train, test = train_test_split(dataset, test_size=0.1, random_state=42)
 
     # build the bot
-    if os.path.exists(filename):
+    if os.path.exists(model_filename):
         bot = load_bayesian_model()
     else:
         bot = BayesianAI()
@@ -162,7 +164,7 @@ def disease_classification_train_test(dataset_filename):
 
 def save_bayesian_model(model):
     try:
-        model_file = open(filename, "wb")
+        model_file = open(model_filename, "wb")
         pickle.dump(model, model_file)
     except FileExistsError:
         print("Model file already exists!")
@@ -171,7 +173,7 @@ def save_bayesian_model(model):
 def load_bayesian_model() -> BayesianAI:
     model = None
     try:
-        model = pickle.load(open(filename, "rb"))
+        model = pickle.load(open(model_filename, "rb"))
     except FileNotFoundError:
         raise ValueError("Model file cannot be found!")
     return model
@@ -184,6 +186,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.data is None:
-        chatbot(default_dataset)
+        chatbot(default_dataset_name)
     else:
-        disease_classification_train_test(args.data)
+        disease_classification_full(args.data)
