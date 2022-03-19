@@ -23,7 +23,7 @@ default_dataset_name = "dataset.csv"
 def load_dataset(dataset_filename):
     """ The first column contains the diseases, and each column after contains the symptoms associated with it """
     dataset = pd.read_csv(dataset_filename, low_memory=False)
-    dataset.iloc[:, 1:] = dataset.iloc[:, 1:].replace(r" ", "", regex=True)
+    dataset.iloc[:, 0:] = dataset.iloc[:, 0:].replace(r"\s*[ ]\s*", "", regex=True)
     return dataset
 
 
@@ -40,7 +40,9 @@ def load_symptom_files():
 
     # drop the duplicate for fluid_overload
     symptom_severity.drop(45, inplace=True)
-    symptom_severity.replace(r" ", "", inplace=True, regex=True)
+    symptom_desc.iloc[:, 0] = symptom_desc.iloc[:, 0].replace(r"\s*[ ]\s*", "", regex=True)
+    symptom_precaution.iloc[:, 0] = symptom_precaution.iloc[:, 0].replace(r"\s*[ ]\s*", "", regex=True)
+    symptom_severity.replace(r"\s*[ ]\s*", "", inplace=True, regex=True)
 
     return symptom_desc, symptom_precaution, symptom_severity
 

@@ -32,8 +32,9 @@ class BayesianAI:
         self.found_disease = False
         """ Whether we have narrowed down a likely disease. """
 
-        self.confirmed_symptoms = []
-        """ A list tracking symptoms that the user has confirmed they have. """
+        self.symptoms_asked = {}
+        """ A list tracking symptoms that have been asked and whether the user has it. 
+        Key: Symptom Name. Value: Boolean for whether the user has it."""
 
         self.possible_diseases = {}
         """ Tracks the possible diseases and their probability. """
@@ -112,56 +113,37 @@ class BayesianAI:
         deducing possible candidates and symptom to ask.
         """
         # store the first symptom as confirmed symptoms
-        self.confirmed_symptoms.append(symptom)
+        self.symptoms_asked[symptom] = True
 
         # fill out the possible diseases.
         for disease in self.disease_prob_dist.values: # type: ignore
             self.possible_diseases[disease] = self.disease_prob_dist[disease] # type: ignore
 
-        # search through the diseases and find symptoms to ask for.
-        self.symptoms_to_ask = []
-        for symptom_counter in self.disease_symptom_counter.values():
-            if symptom in symptom_counter.keys():
-                for _symptom in symptom_counter:
-                    if _symptom == "total" or _symptom == symptom or _symptom in self.symptoms_to_ask:
-                        continue
+        self.update_possible_diseases(symptom, True)
 
-                    self.symptoms_to_ask.append(_symptom)
-
-        if len(self.symptoms_to_ask) == 0:
-            raise ValueError(f"Invalid symptom '{symptom}'. Exiting the bot")
-
-        # sort it alphabetically
-        self.symptoms_to_ask = sorted(self.symptoms_to_ask)
-        self.symptoms_to_ask.reverse()
-
-        self.update_possible_diseases(symptom)
-
-    def update_possible_diseases(self, symptom):
+    def update_possible_diseases(self, symptom, hasSymptom: bool):
         for disease in self.possible_diseases: # type: ignore
             # multiply the probability into the disease prob. in the dict
-            self.possible_diseases[disease] *= self.disease_symptom_joint_prob_dist[symptom, disease]
+            if hasSymptom:
+                self.possible_diseases[disease] *= self.disease_symptom_joint_prob_dist[symptom, disease]
+            else:
+                # opposite => we want to get the diseases that DON'T have the symptom
+                # thus, since the joint prob dist has the probs for having the symptom, we
+                # need to manually 1 - that value
+                self.possible_diseases[disease] *= (1 - self.disease_symptom_joint_prob_dist[symptom, disease])
 
         # remove the zeroes
         self.possible_diseases = {k: v for k, v in self.possible_diseases.items() if v != 0}
 
-        # check if we are done
-        if len(self.possible_diseases.keys()) == 1:
-            # first time => we narrowed down the disease.
-            # technically done. Ensure we keep asking for symptoms specific
-            # to this disease only to calculate severity.
-            if not self.found_disease:
-                self.found_disease = True
-                disease = next(iter(self.possible_diseases))
-                symps_of_disease = self.disease_symptom_counter[disease]
-                symps_to_ask = [symp for symp in symps_of_disease if symp in self.symptoms_to_ask]
-                self.symptoms_to_ask = symps_to_ask
+        most_likely_disease = max(self.possible_diseases, key=self.possible_diseases.get) # type: ignore
+        symps_of_disease = self.disease_symptom_counter[most_likely_disease]
+        self.symptoms_to_ask = [symp for symp in symps_of_disease if symp not in self.symptoms_asked and symp != "total"]
 
-            if len(self.symptoms_to_ask) == 0:
-                # no more questions to ask => we are truly done
-                self.finished = True
+        if len(self.symptoms_to_ask) == 0:
+            # no more questions to ask => we are truly done
+            self.finished = True
 
-        if len(self.possible_diseases.keys()) == 0:
+        elif len(self.possible_diseases.keys()) == 0:
             self.finished = True
 
     def get_symptom_to_ask(self):
@@ -169,8 +151,6 @@ class BayesianAI:
         Return the last symptom in the symptoms to ask list.
         This is so we can just pop it out.
         """
-        if len(self.symptoms_to_ask) == 1:
-            self.finished = True
         return self.symptoms_to_ask[-1]
 
     def give_symptom_answer(self, ans: bool):
@@ -179,11 +159,8 @@ class BayesianAI:
         """
         # remove the symptom from the list
         symptom = self.symptoms_to_ask.pop()
-        if ans:
-            # if the answer to this symptom is yes (y) add that symptom
-            self.confirmed_symptoms.append(symptom)
-            # update the possible diseases from this symptom
-            self.update_possible_diseases(symptom)
+        self.symptoms_asked[symptom] = ans
+        self.update_possible_diseases(symptom, ans)
 
     def get_most_likely_disease(self, desc: pd.DataFrame, precautions: pd.DataFrame) -> str:
         # get the disease and confidence score
@@ -217,9 +194,10 @@ class BayesianAI:
         Calculate the severity of the disease given the confirmed symptoms.
         """
         severity_sum = 0
-        size = len(self.confirmed_symptoms) + 1
+        confirmed_symptoms = [symptom for symptom, hasIt in self.symptoms_asked.items() if hasIt]
+        size = len(confirmed_symptoms) + 1
 
-        for symptom in self.confirmed_symptoms:
+        for symptom in confirmed_symptoms:
             row = severity.loc[(severity.iloc[:, 0] == symptom)]
             severity_sum += int(row[1]) # type: ignore
 
